@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice – Dust Bunnies Cleaning Company</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      color: #222;
+      background: #f0f0f0;
+      padding: 24px;
+    }
+
+    /* ── Screen-only controls ── */
+    .controls {
+      max-width: 860px;
+      margin: 0 auto 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .controls button {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .btn-print  { background: #c0392b; color: #fff; }
+    .btn-add    { background: #27ae60; color: #fff; }
+    .btn-remove { background: #e74c3c; color: #fff; font-size: 12px; padding: 4px 10px; }
+
+    /* ── Invoice card ── */
+    .invoice {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 36px 40px;
+      border: 1px solid #ddd;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+      border-bottom: 2px solid #c0392b;
+      padding-bottom: 16px;
+    }
+
+    .header-left h1 {
+      font-size: 22px;
+      color: #c0392b;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    .header-left p { color: #555; line-height: 1.6; }
+
+    .logo-box {
+      text-align: right;
+      color: #c0392b;
+      font-size: 15px;
+      font-style: italic;
+      font-weight: bold;
+      line-height: 1.4;
+      border: 2px dashed #e8a0a0;
+      padding: 10px 16px;
+      border-radius: 6px;
+    }
+
+    .logo-box span { display: block; font-size: 11px; color: #999; font-style: normal; font-weight: normal; }
+
+    /* ── Editable fields ── */
+    [contenteditable="true"] {
+      outline: none;
+      border-bottom: 1px dashed #bbb;
+      min-width: 60px;
+      display: inline-block;
+      cursor: text;
+    }
+
+    [contenteditable="true"]:focus {
+      border-bottom: 1px solid #c0392b;
+      background: #fff9f9;
+    }
+
+    input[type="text"], input[type="date"], input[type="number"], select {
+      border: none;
+      border-bottom: 1px dashed #bbb;
+      outline: none;
+      font-family: inherit;
+      font-size: 13px;
+      color: #222;
+      background: transparent;
+      padding: 1px 2px;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-bottom: 1px solid #c0392b;
+      background: #fff9f9;
+    }
+
+    /* ── Bill to / Ship to ── */
+    .billing-section {
+      display: flex;
+      gap: 60px;
+      margin-bottom: 24px;
+    }
+
+    .billing-block label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #999;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .billing-block p { color: #333; line-height: 1.7; }
+
+    /* ── Invoice meta ── */
+    .invoice-meta {
+      margin-bottom: 24px;
+      background: #fafafa;
+      padding: 12px 16px;
+      border-left: 3px solid #c0392b;
+    }
+
+    .invoice-meta h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #c0392b;
+      margin-bottom: 8px;
+    }
+
+    .invoice-meta table { border-collapse: collapse; }
+    .invoice-meta td { padding: 2px 16px 2px 0; color: #444; }
+    .invoice-meta td:first-child { color: #777; font-size: 12px; width: 110px; }
+
+    /* ── Line items table ── */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+
+    .items-table th {
+      background: #c0392b;
+      color: #fff;
+      text-align: left;
+      padding: 7px 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .items-table th.right,
+    .items-table td.right { text-align: right; }
+
+    .items-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+
+    .items-table tr:nth-child(even) td { background: #fafafa; }
+
+    .items-table input[type="number"] { width: 60px; }
+    .items-table input[type="date"]   { width: 110px; }
+    .items-table input[type="text"]   { width: 100%; }
+
+    select.service-select { width: 180px; }
+    select.rate-select    { width: 90px; }
+
+    .amount-cell { font-weight: bold; color: #333; }
+
+    /* ── Totals ── */
+    .totals {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 28px;
+    }
+
+    .totals-box { min-width: 220px; }
+
+    .totals-box .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+    }
+
+    .totals-box .total-row.grand {
+      font-size: 15px;
+      font-weight: bold;
+      color: #c0392b;
+      border-bottom: 2px solid #c0392b;
+      padding-top: 8px;
+    }
+
+    /* ── Footer / payment ── */
+    .footer {
+      border-top: 1px solid #eee;
+      padding-top: 16px;
+    }
+
+    .footer h4 {
+      font-size: 12px;
+      color: #c0392b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .footer p { color: #666; font-size: 12px; line-height: 1.6; }
+
+    textarea.notes-field {
+      width: 100%;
+      border: 1px dashed #ddd;
+      border-radius: 4px;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 12px;
+      color: #555;
+      resize: vertical;
+      min-height: 60px;
+      margin-top: 12px;
+    }
+
+    textarea.notes-field:focus { outline: none; border-color: #c0392b; }
+
+    /* ── Preset rates info ── */
+    .rate-legend {
+      font-size: 11px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    /* ── Print styles ── */
+    @media print {
+      body { background: #fff; padding: 0; }
+      .controls { display: none; }
+      .invoice { border: none; padding: 20px; max-width: 100%; }
+      .btn-remove { display: none; }
+      [contenteditable="true"] { border-bottom: none; }
+      input, select, textarea { border: none !important; background: transparent !important; }
+      select { appearance: none; -webkit-appearance: none; }
+      textarea.notes-field { border: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen controls (hidden when printing) -->
+  <div class="controls">
+    <button class="btn-add" onclick="addRow()">+ Add Line Item</button>
+    <button class="btn-print" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <div class="invoice">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <h1>Invoice</h1>
+        <p>
+          <strong>Dust Bunnies Cleaning Company</strong><br>
+          5431 Byron Rd<br>
+          Durand, MI 48429<br>
+          dustbunniesdco@gmail.com<br>
+          +1 (810) 447-3530
+        </p>
+      </div>
+      <div class="logo-box">
+        Dust Bunnies<br>Cleaning Company
+        <span>logo placeholder</span>
+      </div>
+    </div>
+
+    <!-- Bill to / Ship to -->
+    <div class="billing-section">
+      <div class="billing-block">
+        <label>Bill to</label>
+        <p contenteditable="true" id="bill-to">Customer / Company Name<br>Address line 1<br>City, State ZIP</p>
+      </div>
+      <div class="billing-block">
+        <label>Ship to</label>
+        <p contenteditable="true" id="ship-to">Customer / Company Name<br>Address line 1<br>City, State ZIP</p>
+      </div>
+    </div>
+
+    <!-- Invoice meta -->
+    <div class="invoice-meta">
+      <h3>Invoice Details</h3>
+      <table>
+        <tr>
+          <td>Invoice no.</td>
+          <td><input type="text" id="invoice-num" value="100" style="width:80px" /></td>
+        </tr>
+        <tr>
+          <td>Invoice date</td>
+          <td><input type="date" id="invoice-date" /></td>
+        </tr>
+        <tr>
+          <td>Due date</td>
+          <td><input type="date" id="due-date" /></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Line items -->
+    <table class="items-table" id="items-table">
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th style="width:115px">Date</th>
+          <th style="width:190px">Product / Service</th>
+          <th>Description</th>
+          <th class="right" style="width:55px">Qty</th>
+          <th class="right" style="width:95px">Rate</th>
+          <th class="right" style="width:80px">Amount</th>
+          <th style="width:30px"></th>
+        </tr>
+      </thead>
+      <tbody id="items-body">
+        <!-- rows injected by JS -->
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="totals">
+      <div class="totals-box">
+        <div class="total-row grand">
+          <span>Total</span>
+          <span id="grand-total">$0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <h4>Notes / Payment Instructions</h4>
+      <textarea class="notes-field" placeholder="Add payment instructions, thank-you note, or any other details here…"></textarea>
+    </div>
+
+  </div><!-- /.invoice -->
+
+  <script>
+    // ── Preset rates ────────────────────────────────────────────────
+    // Add or remove entries here as the customer provides their full list.
+    const PRESET_RATES = [
+      { label: "1 Bed – $150.00",              value: 150.00 },
+      { label: "2 Bed – $175.00",              value: 175.00 },
+      { label: "Common area – $50.00",         value: 50.00  },
+      { label: "Common area – $33.34",         value: 33.34  },
+      { label: "Custom rate",                  value: null   },
+    ];
+
+    const SERVICES = [
+      "Common area maintenance clean",
+      "1-Bedroom unit clean",
+      "2-Bedroom unit clean",
+      "Deep clean",
+      "Move-in / Move-out clean",
+      "Other",
+    ];
+
+    // ── State ────────────────────────────────────────────────────────
+    let rowCount = 0;
+
+    function addRow(dateVal = "", serviceVal = "", descVal = "", qty = 1, rateVal = null) {
+      rowCount++;
+      const tbody = document.getElementById("items-body");
+      const tr = document.createElement("tr");
+      tr.id = `row-${rowCount}`;
+
+      const today = dateVal || new Date().toISOString().slice(0, 10);
+      const rateOptions = PRESET_RATES.map(r =>
+        `<option value="${r.value ?? ""}" ${rateVal !== null && r.value === rateVal ? "selected" : ""}>${r.label}</option>`
+      ).join("");
+
+      const serviceOptions = SERVICES.map(s =>
+        `<option ${s === serviceVal ? "selected" : ""}>${s}</option>`
+      ).join("");
+
+      tr.innerHTML = `
+        <td>${rowCount}</td>
+        <td><input type="date" value="${today}" onchange="recalc()" /></td>
+        <td>
+          <select class="service-select" onchange="recalc()">
+            ${serviceOptions}
+          </select>
+        </td>
+        <td><input type="text" value="${descVal}" placeholder="e.g. Crest View 1" onchange="recalc()" style="width:100%" /></td>
+        <td class="right">
+          <input type="number" min="0" step="0.5" value="${qty}" style="width:50px;text-align:right" oninput="recalc()" />
+        </td>
+        <td class="right">
+          <select class="rate-select" onchange="onRateSelect(this, ${rowCount})" id="rate-sel-${rowCount}">
+            ${rateOptions}
+          </select>
+          <br>
+          <input type="number" min="0" step="0.01" id="rate-inp-${rowCount}"
+                 value="${rateVal ?? (PRESET_RATES[0].value ?? "")}"
+                 style="width:80px;text-align:right;margin-top:2px"
+                 oninput="recalc()" />
+        </td>
+        <td class="right amount-cell" id="amt-${rowCount}">$0.00</td>
+        <td><button class="btn-remove" onclick="removeRow(${rowCount})">✕</button></td>
+      `;
+
+      tbody.appendChild(tr);
+      recalc();
+    }
+
+    function onRateSelect(sel, id) {
+      const val = sel.value;
+      const inp = document.getElementById(`rate-inp-${id}`);
+      if (val !== "") {
+        inp.value = parseFloat(val).toFixed(2);
+      } else {
+        inp.value = "";
+        inp.focus();
+      }
+      recalc();
+    }
+
+    function removeRow(id) {
+      const tr = document.getElementById(`row-${id}`);
+      if (tr) tr.remove();
+      renumberRows();
+      recalc();
+    }
+
+    function renumberRows() {
+      const rows = document.querySelectorAll("#items-body tr");
+      rows.forEach((tr, i) => tr.cells[0].textContent = i + 1);
+    }
+
+    function recalc() {
+      let grand = 0;
+      const rows = document.querySelectorAll("#items-body tr");
+      rows.forEach(tr => {
+        const qty  = parseFloat(tr.querySelector('input[type="number"]')?.value) || 0;
+        const rateId = tr.id.replace("row-", "");
+        const rate = parseFloat(document.getElementById(`rate-inp-${rateId}`)?.value) || 0;
+        const amt  = qty * rate;
+        grand += amt;
+        const amtCell = tr.querySelector(".amount-cell");
+        if (amtCell) amtCell.textContent = "$" + amt.toFixed(2);
+      });
+      document.getElementById("grand-total").textContent = "$" + grand.toFixed(2);
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────
+    // Set today's date as defaults
+    const todayStr = new Date().toISOString().slice(0, 10);
+    document.getElementById("invoice-date").value = todayStr;
+
+    // Default due date = 14 days out
+    const due = new Date(); due.setDate(due.getDate() + 14);
+    document.getElementById("due-date").value = due.toISOString().slice(0, 10);
+
+    // Start with 3 empty rows matching the sample invoice layout
+    addRow(todayStr, "Common area maintenance clean", "", 1, 50.00);
+    addRow(todayStr, "Common area maintenance clean", "", 1, 50.00);
+    addRow(todayStr, "Common area maintenance clean", "", 1, 33.34);
+  </script>
+</body>
+</html>
