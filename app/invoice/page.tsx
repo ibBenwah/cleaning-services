@@ -1,12 +1,53 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface LineItem {
   id: number;
   description: string;
   qty: string;
   rate: string;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  company: string;
+  address: string;
+  email: string;
+}
+
+const INVOICE_NUM_KEY = "pp_last_invoice_number";
+const CUSTOMERS_KEY = "pp_customers";
+const STARTING_INVOICE = 1001;
+
+function loadNextInvoiceNumber(): string {
+  const stored = localStorage.getItem(INVOICE_NUM_KEY);
+  if (!stored) return String(STARTING_INVOICE);
+  return String(parseInt(stored, 10) + 1);
+}
+
+function saveInvoiceNumber(num: string) {
+  localStorage.setItem(INVOICE_NUM_KEY, num);
+}
+
+function loadCustomers(): Customer[] {
+  try {
+    return JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomer(customer: Customer) {
+  const customers = loadCustomers();
+  const existing = customers.findIndex((c) => c.id === customer.id);
+  if (existing >= 0) {
+    customers[existing] = customer;
+  } else {
+    customers.unshift(customer);
+  }
+  localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers));
 }
 
 const emptyItem = (id: number): LineItem => ({
@@ -19,7 +60,7 @@ const emptyItem = (id: number): LineItem => ({
 let nextId = 4;
 
 export default function InvoicePage() {
-  const [invoiceNumber, setInvoiceNumber] = useState("001");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -37,6 +78,47 @@ export default function InvoicePage() {
   const [notes, setNotes] = useState(
     "Payment due within 30 days of invoice date. Thank you for your business!"
   );
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [savedBanner, setSavedBanner] = useState(false);
+
+  useEffect(() => {
+    setInvoiceNumber(loadNextInvoiceNumber());
+    setCustomers(loadCustomers());
+  }, []);
+
+  function handleSelectCustomer(id: string) {
+    setSelectedCustomerId(id);
+    if (!id) return;
+    const c = customers.find((c) => c.id === id);
+    if (!c) return;
+    setClientName(c.name);
+    setClientCompany(c.company);
+    setClientAddress(c.address);
+    setClientEmail(c.email);
+  }
+
+  function handleSaveCustomer() {
+    if (!clientName.trim()) return;
+    const customer: Customer = {
+      id: selectedCustomerId || Date.now().toString(),
+      name: clientName,
+      company: clientCompany,
+      address: clientAddress,
+      email: clientEmail,
+    };
+    saveCustomer(customer);
+    const updated = loadCustomers();
+    setCustomers(updated);
+    setSelectedCustomerId(customer.id);
+    setSavedBanner(true);
+    setTimeout(() => setSavedBanner(false), 2500);
+  }
+
+  function handlePrint() {
+    saveInvoiceNumber(invoiceNumber);
+    window.print();
+  }
 
   function addItem() {
     setItems((prev) => [...prev, emptyItem(nextId++)]);
@@ -119,9 +201,8 @@ export default function InvoicePage() {
             </p>
           </div>
           <button
-            onClick={() => window.print()}
-            className="bg-navy hover:bg-navy/90 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors"
-          >
+            onClick={handlePrint}
+            className="bg-navy hover:bg-navy/90 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors">
             Print / Save PDF
           </button>
         </div>
@@ -138,8 +219,9 @@ export default function InvoicePage() {
                 Cleaning LLC
               </div>
               <div className="mt-4 text-white/60 text-sm space-y-0.5">
-                <p>(000) 000-0000</p>
-                <p>info@pureperfectioncleaning.com</p>
+                <p>(586) 230-0992</p>
+                <p>(586) 822-8254</p>
+                <p>pureperfectioncleaning8254@gmail.com</p>
               </div>
             </div>
             <div className="text-right">
@@ -185,11 +267,35 @@ export default function InvoicePage() {
             <p className="text-xs font-bold text-muted uppercase tracking-widest mb-3">
               Bill To
             </p>
+
+            {/* Customer selector */}
+            <div className="no-print flex items-center gap-2 mb-4">
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => handleSelectCustomer(e.target.value)}
+                className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 focus:outline-none focus:ring-1 focus:ring-sky bg-white"
+              >
+                <option value="">— Select saved customer —</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.company ? ` — ${c.company}` : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleSaveCustomer}
+                disabled={!clientName.trim()}
+                className="text-sm font-medium px-3 py-1.5 rounded-lg border border-sky text-sky hover:bg-sky/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+              >
+                {savedBanner ? "Saved!" : "Save customer"}
+              </button>
+            </div>
+
             <div className="space-y-1.5">
               <input
                 type="text"
                 value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
+                onChange={(e) => { setClientName(e.target.value); setSelectedCustomerId(""); }}
                 placeholder="Client Name"
                 className="no-print block w-full text-navy font-semibold text-base border-b border-dashed border-slate-200 pb-1 focus:outline-none focus:border-sky"
               />
@@ -197,7 +303,7 @@ export default function InvoicePage() {
               <input
                 type="text"
                 value={clientCompany}
-                onChange={(e) => setClientCompany(e.target.value)}
+                onChange={(e) => { setClientCompany(e.target.value); setSelectedCustomerId(""); }}
                 placeholder="Company / Property Name"
                 className="no-print block w-full text-sm text-slate-600 border-b border-dashed border-slate-200 pb-1 focus:outline-none focus:border-sky"
               />
@@ -205,7 +311,7 @@ export default function InvoicePage() {
               <input
                 type="text"
                 value={clientAddress}
-                onChange={(e) => setClientAddress(e.target.value)}
+                onChange={(e) => { setClientAddress(e.target.value); setSelectedCustomerId(""); }}
                 placeholder="Address"
                 className="no-print block w-full text-sm text-slate-600 border-b border-dashed border-slate-200 pb-1 focus:outline-none focus:border-sky"
               />
@@ -213,7 +319,7 @@ export default function InvoicePage() {
               <input
                 type="email"
                 value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
+                onChange={(e) => { setClientEmail(e.target.value); setSelectedCustomerId(""); }}
                 placeholder="Email Address"
                 className="no-print block w-full text-sm text-slate-600 border-b border-dashed border-slate-200 pb-1 focus:outline-none focus:border-sky"
               />

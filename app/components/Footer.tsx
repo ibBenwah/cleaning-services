@@ -26,8 +26,9 @@ export default function Footer() {
               property managers, contractors, and business owners.
             </p>
             <div className="mt-4 space-y-1 text-sm text-white/50">
-              <p>📞 (000) 000-0000</p>
-              <p>✉ info@pureperfectioncleaning.com</p>
+              <p>📞 (586) 230-0992</p>
+              <p>📞 (586) 822-8254</p>
+              <p>✉ pureperfectioncleaning8254@gmail.com</p>
             </div>
           </div>
 
