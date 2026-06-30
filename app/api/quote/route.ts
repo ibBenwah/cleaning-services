@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   const { error } = await resend.emails.send({
     from: "Pure Perfection Cleaning <onboarding@resend.dev>",
-    to: "garret.c.benoit@gmail.com",
+    to: "pureperfectioncleaning8254@gmail.com",
     replyTo: email,
     subject: `New Quote Request — ${service}`,
     html: `
